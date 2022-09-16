@@ -1,0 +1,337 @@
+fun <T> Context.startActivityWithTransition(
+    cls: Class<T>,
+    isFinish: Boolean,
+    implicitIntent: Boolean,
+    action: String = "",
+    activity: Activity,
+    block: Intent.() -> Unit = {},
+    enterAnim:Int,
+    exitAnim:Int
+) {
+    val intent = if (implicitIntent) Intent(action) else Intent(this, cls)
+    startActivity(intent.apply { block })
+    if (isFinish)
+        activity.finishAffinity()
+    activity.overridePendingTransition(enterAnim, exitAnim)
+}
+
+
+Ex:
+
+startActivityWithTransition( 
+            cls = MainActivity::class.java, 
+            isFinish = true, 
+            implicitIntent = false, 
+            activity = this@BaseActivity, 
+            enterAnim = R.anim.slide_in_right, 
+            exitAnim = R.anim.slide_out_left 
+        )
+
+
+fun <T> JsonElement.parseDataToModel(cls: Class<T>): T =
+    Gson().fromJson(this, cls)
+
+Ex:
+val loginResponse = data?.parseDataToModel(LoginResponse::class.java)!!
+
+
+fun Activity.onBackPressedWithAnimation(enterAnim:Int, exitAnim:Int) {
+    onBackPressed()
+    overridePendingTransition(enterAnim, exitAnim)
+}
+
+fun Activity.finishWithAnimation(enterAnim:Int, exitAnim:Int) {
+    finish()
+    overridePendingTransition(enterAnim, exitAnim)
+}
+
+fun String.validateEmail() = Patterns.EMAIL_ADDRESS.matcher(this).matches()
+
+fun String.validatePasswordLength(length: Int) = this.length < length
+fun View.copyToClipBoard(strToCopy: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("", strToCopy)
+    clipboard.setPrimaryClip(clip)
+}
+
+fun ImageView.setImage(resource: Any) {
+    if (resource is Int) {
+        setImageResource(resource)
+    } else {
+        //using coil
+        this.load(resource)
+        
+        //OR
+        //using Glide
+        Glide
+            .with(this)
+            .load(resource)
+            .into(this)
+    }
+}
+
+fun String.getFaceBookPhotoUrl() = "https://graph.facebook.com/$this/picture?type=large"
+
+fun <T> JsonElement.parseDataToModel(cls: Class<T>) {
+    Gson().fromJson(this, cls::class.java)
+}
+
+fun EditText.allowScrollingInsideOnTouch() {
+    setOnTouchListener { v: View, event: MotionEvent ->
+        if (hasFocus()) {
+            v.parent.requestDisallowInterceptTouchEvent(true)
+            when (event.action and MotionEvent.ACTION_MASK) {
+                MotionEvent.ACTION_SCROLL -> {
+                    v.parent.requestDisallowInterceptTouchEvent(false)
+                    return@setOnTouchListener true
+                }
+            }
+        }
+        false
+    }
+}
+
+fun show(vararg views: View) {
+    for (view in views) {
+        view.show()
+    }
+}
+
+
+
+fun hide(vararg views: View) {
+    for (view in views) {
+        view.hide()
+    }
+}
+
+fun String.showLongToast() {
+    Toast.makeText(App.applicationContext(), this, Toast.LENGTH_LONG).show() 
+}
+
+fun String.showShortToast() {
+    Toast.makeText(App.applicationContext(), this, Toast.LENGTH_SHORT).show() 
+}
+
+fun View.showKeyBoard(){
+    val imm: InputMethodManager =
+        context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+}
+
+fun View.hideKeyBoard() {
+    val imm: InputMethodManager =
+        context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    imm.hideSoftInputFromWindow(windowToken, 0)
+    clearFocus()
+}
+
+fun Context.isConnectedToInternet(): Boolean {
+    var isOnline = false
+    try {
+        val manager =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        isOnline = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val capabilities = manager.getNetworkCapabilities(manager.activeNetwork!!)
+            capabilities != null && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } else {
+            val networkInfo = manager.activeNetworkInfo
+            networkInfo != null && networkInfo.isConnectedOrConnecting
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return isOnline
+}
+
+
+suspend fun <T> T.storeDataInPref(key: Preferences.Key<T>) {
+    ChildMediationApp.applicationContext().dataStore.edit {
+        it[key] = this
+    }
+}
+
+
+fun <T> Preferences.Key<T>.getDataFromPref(): Flow<T> {
+    return ChildMediationApp.applicationContext().dataStore.data.map {
+        it[this]!!
+    }
+}
+
+
+fun Activity.fullScreen() {
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+    val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+    window.statusBarColor = Color.TRANSPARENT
+    windowInsetsController.systemBarsBehavior =
+        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+}
+
+
+fun TextView.clickableSpan(
+    spanString: String,
+    spannableString: SpannableString = SpannableString("")
+): SpannableString {
+    val clickableSpan: ClickableSpan = object : ClickableSpan() {
+        override fun updateDrawState(ds: TextPaint) {
+            super.updateDrawState(ds)
+            ds.isUnderlineText = false
+            ds.color = ContextCompat.getColor(context, R.color.black)
+        }
+
+        override fun onClick(p0: View) {
+            Toast.makeText(context, spanString, Toast.LENGTH_SHORT).show()
+        }
+    }
+    val textString = text.toString()
+    val txtSpannable = spannableString.ifBlank {
+        SpannableString(textString)
+    }
+    val startIndex = textString.indexOf(spanString)
+    val endIndex = textString.indexOf(spanString) + spanString.length
+    txtSpannable.setSpan(clickableSpan, startIndex, endIndex, 0)
+    movementMethod = LinkMovementMethod.getInstance()
+    highlightColor = Color.TRANSPARENT
+    return txtSpannable
+}
+
+fun TextView.setTextAppearanceSpan(
+    spanString: String, appearance: Int,
+    spannableString: SpannableString = SpannableString("")
+): SpannableString {
+    val textString = text.toString()
+    val txtSpannable = spannableString.ifBlank {
+        SpannableString(textString)
+    }
+    val startIndex = textString.indexOf(spanString)
+    val endIndex = textString.indexOf(spanString) + spanString.length
+    txtSpannable.setSpan(
+        TextAppearanceSpan(
+            context, appearance
+        ), startIndex, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+    )
+    return txtSpannable
+}
+
+fun TextView.underlineSpan(
+    spanString: String,
+    spannableString: SpannableString = SpannableString("")
+): SpannableString {
+    val textString = text.toString()
+    val txtSpannable = spannableString.ifBlank {
+        SpannableString(textString)
+    }
+    val startIndex = textString.indexOf(spanString)
+    val endIndex = textString.indexOf(spanString) + spanString.length
+    txtSpannable.setSpan(
+        UnderlineSpan(),
+        startIndex,
+        endIndex,
+        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+    )
+    return txtSpannable
+}
+
+fun TextView.linkSpan(
+    spanString: String, color: Int,
+    spannableString: SpannableString = SpannableString("")
+): SpannableString {
+    val textString = text.toString()
+    val txtSpannable = spannableString.ifBlank {
+        SpannableString(textString)
+    }
+    val startIndex = textString.indexOf(spanString)
+    val endIndex = textString.indexOf(spanString) + spanString.length
+    txtSpannable.setSpan(
+        ForegroundColorSpan(color),
+        startIndex,
+        endIndex,
+        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+    )
+    return txtSpannable
+}
+
+fun TextView.boldSpan(
+    spanString: String,
+    spannableString: SpannableString = SpannableString("")
+): SpannableString {
+    val textString = text.toString()
+    val txtSpannable = spannableString.ifBlank {
+        SpannableString(textString)
+    }
+    val startIndex = textString.indexOf(spanString)
+    val endIndex = textString.indexOf(spanString) + spanString.length
+    txtSpannable.setSpan(
+        StyleSpan(Typeface.BOLD),
+        startIndex,
+        endIndex,
+        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+    )
+    return txtSpannable
+}
+
+fun TextView.drawableSpan(
+    spanString: String, drawable: Int,
+    spannableString: SpannableString = SpannableString("")
+): SpannableString {
+    val textString = text.toString()
+    val imageSpan = MyDynamicDrawableSpan(context, drawable)
+    val txtSpannable = spannableString.ifBlank {
+        SpannableString(textString)
+    }
+    val startIndex = textString.indexOf(spanString)
+    val endIndex = textString.indexOf(spanString) + spanString.length
+    txtSpannable.setSpan(imageSpan, startIndex, endIndex, 0)
+    return txtSpannable
+}
+
+
+Ex:
+var sp1 = textView.clickableSpan("World")
+sp1 = textView.clickableSpan("Hello", sp1)
+sp1 = textView.underlineSpan("l", sp1)
+sp1 = textView.underlineSpan("World", sp1)
+sp1 = textView.linkSpan("World", ContextCompat.getColor(this, R.color.teal_700), sp1)
+sp1 = textView.drawableSpan("!", R.drawable.a, sp1)
+sp1 = textView.boldSpan("o", sp1)
+sp1 = textView.setTextAppearanceSpan("H", android.R.style.TextAppearance_Holo, sp1)
+textView.text = sp1
+
+extension function with inline function 
+
+
+inline fun <reified T : Activity> Context.startActivity( 
+    isFinish: Boolean, 
+    activity: Activity, 
+    implicitIntent: Boolean, 
+    action: String = "", 
+    block: Intent.() -> Unit = {} 
+) { 
+    val intent = if (implicitIntent) Intent(action) else Intent(this, T::class.java) 
+    startActivity(intent.apply(block)) 
+    if (isFinish) 
+        activity.finishAffinity() 
+    activity.overridePendingTransition(enterAnim, exitAnim)
+}
+
+
+
+Ex:
+startActivity<MainActivity>( 
+            isFinish = false, 
+            activity = requireActivity(), 
+            implicitIntent = false 
+        ) { 
+            putExtra("key", "value") 
+        }
+
+
+
+
+inline fun <reified T : Any> JsonElement.parseDataToModel(): T =
+    Gson().fromJson(this, T::class.java)
+
+
+Ex:
+val loginResponse = data?.parseDataToModel<LoginResponse>()!!
