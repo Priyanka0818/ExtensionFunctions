@@ -126,6 +126,11 @@ fun View.hideKeyBoard() {
     clearFocus()
 }
 
+ fun Context.currentActivity(): Activity? = when {
+        this is Activity -> this
+        else -> (this as? ContextWrapper)?.baseContext?.activity()
+    }
+    
 fun Context.isConnectedToInternet(): Boolean {
     var isOnline = false
     try {
